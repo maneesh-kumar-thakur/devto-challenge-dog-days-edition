@@ -52,6 +52,38 @@ export interface PresetDog {
   description: string;
 }
 
+export interface PackDebateParticipant {
+  id: string;
+  name: string;
+  position: 'left' | 'center' | 'right' | 'foreground' | 'background';
+  breedOrAppearance: string;
+  personality: PersonalityId;
+  personalityName: string;
+  facialClue: string;
+  colorScheme: string; // Tailwind color class for avatars
+}
+
+export interface PackDebateLine {
+  id: string;
+  speakerId: string;
+  speakerName: string;
+  personality: PersonalityId;
+  line: string;
+  tone: string;
+  audioUrl?: string;
+}
+
+export interface PackDebateResult {
+  id: string;
+  imageUrl: string;
+  title: string;
+  disputeTopic: string;
+  packVerdict: string;
+  participants: PackDebateParticipant[];
+  dialogue: PackDebateLine[];
+  timestamp: number;
+}
+
 export interface ApiStatusResponse {
   geminiConfigured: boolean;
   elevenLabsConfigured: boolean;

@@ -282,6 +282,255 @@ Respond in valid strict JSON matching this exact structure:
   }
 });
 
+// 2.5 Multi-Dog Pack Debate Translation
+app.post('/api/translate-pack-debate', async (req, res) => {
+  try {
+    const { imageBase64, imageUrl, disputeTopic = '' } = req.body;
+
+    if (!imageBase64 && !imageUrl) {
+      return res.status(400).json({ error: 'Please provide a photo for Pack Debate analysis.' });
+    }
+
+    const ai = getGeminiClient();
+    if (!ai) {
+      return res.status(500).json({
+        error: 'GEMINI_API_KEY is not configured in server environment.',
+      });
+    }
+
+    const promptText = `
+You are the moderator and mind-reader for an interactive multi-pet comic debate.
+Carefully examine this photograph to identify all the dogs or pets present, their positions, visual expressions, and body language.
+
+Generate a hilarious "Pack Debate" script where the dogs/pets are arguing or discussing a relatable canine controversy.
+
+Personality archetypes to assign to participants:
+- "dramatic-diva": Dramatic, theatrical, indignant, everything is a scandal.
+- "chill-bro": Relaxed, unbothered, dude/bro slang, zen couch philosophy.
+- "anxious-overthinker": Nervous, overanalyzing, catastrophizing minor sounds.
+- "regal-aristocrat": Posh, condescending, refers to humans as "the staff".
+- "excited-puppy": Hyperactive, ALL CAPS energy, loves everything wildly.
+- "undercover-detective": Noir gumshoe, searching for clues and treat conspiracies.
+
+${disputeTopic ? `User suggested debate topic: "${disputeTopic}".` : 'Choose a funny dispute topic based on what you see in the photo (e.g. sunbeam ownership, who dropped the toy, who barked at the leaf, treat unfairness, couch space).'}
+
+Instructions:
+1. Detect at least 2 distinct characters (if there is only 1 dog in the photo, make them debate an unseen nemesis like "The Roomba", "The Mailman", or "The Cat Upstairs").
+2. Create 4 to 6 rapid-fire dialogue lines where they bicker back and forth with distinct comedic voices.
+3. Keep lines punchy, funny, and 12-25 words each.
+4. Conclude with a humorous "packVerdict".
+
+Respond strictly in valid JSON matching this schema:
+{
+  "title": "Dramatic Title of the Debate",
+  "disputeTopic": "Short description of the conflict",
+  "participants": [
+    {
+      "id": "dog-1",
+      "name": "Creative name (e.g. Apollo, Barnaby, Duke)",
+      "position": "left" | "right" | "center" | "foreground" | "background",
+      "breedOrAppearance": "e.g. Siberian Husky with blue eyes",
+      "personality": "dramatic-diva" | "chill-bro" | "anxious-overthinker" | "regal-aristocrat" | "excited-puppy" | "undercover-detective",
+      "personalityName": "Dramatic Diva",
+      "facialClue": "Visual expression clue (e.g. High-angle stare of betrayal)",
+      "colorScheme": "amber" | "rose" | "indigo" | "emerald" | "purple"
+    }
+  ],
+  "dialogue": [
+    {
+      "id": "line-1",
+      "speakerId": "dog-1",
+      "speakerName": "Apollo",
+      "personality": "dramatic-diva",
+      "line": "Dialogue line text here...",
+      "tone": "Outraged & Theatrical"
+    }
+  ],
+  "packVerdict": "Humorous resolution or deadlock verdict"
+}
+`;
+
+    // Process image parts
+    let imagePart: any;
+    if (imageBase64) {
+      let mimeType = 'image/jpeg';
+      let cleanData = imageBase64.trim();
+
+      if (cleanData.includes(';base64,')) {
+        const parts = cleanData.split(';base64,');
+        const mimeMatch = parts[0].match(/data:([a-zA-Z0-9.+/_-]+)/);
+        if (mimeMatch && mimeMatch[1]) {
+          mimeType = mimeMatch[1];
+        }
+        cleanData = parts[1] || '';
+      }
+      cleanData = cleanData.replace(/[\r\n\s]+/g, '');
+
+      imagePart = {
+        inlineData: {
+          mimeType,
+          data: cleanData,
+        },
+      };
+    } else if (imageUrl) {
+      try {
+        const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(8000) });
+        if (imgRes.ok) {
+          const arrayBuffer = await imgRes.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
+
+          imagePart = {
+            inlineData: {
+              mimeType,
+              data: buffer.toString('base64'),
+            },
+          };
+        }
+      } catch (fetchErr) {
+        console.warn('Could not fetch external image for pack debate:', fetchErr);
+      }
+    }
+
+    let responseText = '';
+    const contents: any[] = imagePart ? [imagePart, promptText] : [promptText];
+
+    const candidateModels = [
+      'gemini-flash-lite-latest',
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+      'gemini-2.5-pro',
+      'gemini-pro-latest',
+    ];
+
+    for (const modelName of candidateModels) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 800));
+          }
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents,
+            config: {
+              responseMimeType: 'application/json',
+              temperature: 0.9,
+            },
+          });
+          if (response?.text && response.text.trim().length > 0) {
+            responseText = response.text.trim();
+            break;
+          }
+        } catch {
+          // Fallback to next attempt
+        }
+      }
+      if (responseText) break;
+    }
+
+    let parsedResult: any = null;
+    if (responseText && responseText !== '{}') {
+      try {
+        parsedResult = JSON.parse(responseText);
+      } catch {
+        const cleaned = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        try {
+          parsedResult = JSON.parse(cleaned);
+        } catch {
+          parsedResult = null;
+        }
+      }
+    }
+
+    if (!parsedResult || !parsedResult.dialogue || parsedResult.dialogue.length === 0) {
+      // Dynamic fallback pack debate
+      parsedResult = {
+        title: "The High-Stakes Tennis Ball Territory Hearing",
+        disputeTopic: "Who dropped the slobbery tennis ball behind the sofa and who is legally entitled to retrieve it",
+        participants: [
+          {
+            id: "dog-1",
+            name: "Apollo",
+            position: "left",
+            breedOrAppearance: "Siberian Husky with piercing glare",
+            personality: "dramatic-diva",
+            personalityName: "Dramatic Diva",
+            facialClue: "Theatrical vocal posture radiating indignation",
+            colorScheme: "rose",
+          },
+          {
+            id: "dog-2",
+            name: "Barnaby",
+            position: "right",
+            breedOrAppearance: "Golden Retriever with relentless grin",
+            personality: "excited-puppy",
+            personalityName: "Excited Puppy",
+            facialClue: "Wagging tail creating aerodynamic turbulence",
+            colorScheme: "amber",
+          },
+        ],
+        dialogue: [
+          {
+            id: "line-1",
+            speakerId: "dog-1",
+            speakerName: "Apollo",
+            personality: "dramatic-diva",
+            line: "Excuse me, Barnaby! That ball was legally classified as my emotional support sphere before you slobbered on it!",
+            tone: "Courtroom Outrage",
+          },
+          {
+            id: "line-2",
+            speakerId: "dog-2",
+            speakerName: "Barnaby",
+            personality: "excited-puppy",
+            personalityName: "Excited Puppy",
+            line: "BUT APOLLO! LOOK AT IT! IT IS YELLOW! AND BOUNCY! AND I LOVE IT WITH EVERY FIBER OF MY SOUL!",
+            tone: "Maximum Hype",
+          },
+          {
+            id: "line-3",
+            speakerId: "dog-1",
+            speakerName: "Apollo",
+            personality: "dramatic-diva",
+            line: "Your lack of refined decorum is giving me a migraine. The household staff will be serving poultry compensation immediately.",
+            tone: "Aristocratic Disdain",
+          },
+          {
+            id: "line-4",
+            speakerId: "dog-2",
+            speakerName: "Barnaby",
+            personality: "excited-puppy",
+            personalityName: "Excited Puppy",
+            line: "DID SOMEONE SAY POULTRY? I WILL TRADE THE BALL, THREE STICKS, AND MY LEFT PAW FOR POULTRY!",
+            tone: "Extreme Excitement",
+          },
+        ],
+        packVerdict: "Verdict: 50/50 joint ball custody pending immediate chicken treat concessions from the human staff.",
+      };
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: `debate-${Date.now()}`,
+        imageUrl: imageUrl || '',
+        title: parsedResult.title || 'The Great Canine Summit',
+        disputeTopic: parsedResult.disputeTopic || 'Territorial negotiation',
+        packVerdict: parsedResult.packVerdict || 'Verdict: Both dogs demand snacks.',
+        participants: parsedResult.participants || [],
+        dialogue: parsedResult.dialogue || [],
+        timestamp: Date.now(),
+      },
+    });
+  } catch (err: any) {
+    console.error('Error in pack debate analysis:', err);
+    res.status(500).json({
+      error: err.message || 'Failed to analyze pack debate with Gemini Vision.',
+    });
+  }
+});
+
+
 // 3. ElevenLabs Voice Synthesis Endpoint
 app.post('/api/synthesize-voice', async (req, res) => {
   try {

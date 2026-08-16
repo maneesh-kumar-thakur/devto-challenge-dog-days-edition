@@ -50,3 +50,42 @@ export const PRESET_DOGS: PresetDog[] = [
     description: 'Intense perimeter surveillance and squirrel intelligence unit.',
   },
 ];
+
+export interface PresetPackScenario {
+  id: string;
+  title: string;
+  dogs: string;
+  imageUrl: string;
+  description: string;
+}
+
+export const PRESET_PACKS: PresetPackScenario[] = [
+  {
+    id: 'pack-huskies-debate',
+    title: 'The Howling Council',
+    dogs: 'Two Siberian Huskies',
+    imageUrl: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80',
+    description: 'Vocal confrontation over whose turn it is to initiate the 6 AM neighborhood siren aria.',
+  },
+  {
+    id: 'pack-retriever-corgi',
+    title: 'The Tennis Ball Standoff',
+    dogs: 'Golden Retriever & Welsh Corgi',
+    imageUrl: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=800&q=80',
+    description: 'High-stakes diplomatic summit concerning who dropped the soggy tennis ball.',
+  },
+  {
+    id: 'pack-couch-territory',
+    title: 'The Sunbeam Sovereignty Crisis',
+    dogs: 'French Bulldog & Pug',
+    imageUrl: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&w=800&q=80',
+    description: 'Tense negotiation as the carpet sunbeam shifts 4 inches south.',
+  },
+  {
+    id: 'pack-treat-conspiracy',
+    title: 'The Kitchen Floor Task Force',
+    dogs: 'Beagle & Shepherd',
+    imageUrl: 'https://images.unsplash.com/photo-1561037404-61cd46aa615b?auto=format&fit=crop&w=800&q=80',
+    description: 'Two detectives analyzing crumbs fallen during human sandwich preparation.',
+  },
+];

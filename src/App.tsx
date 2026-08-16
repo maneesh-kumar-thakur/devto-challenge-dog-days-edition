@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { HeroUploader } from './components/HeroUploader';
 import { TranslationViewer } from './components/TranslationViewer';
+import { PackDebateViewer } from './components/PackDebateViewer';
 import { ScanningLoader } from './components/ScanningLoader';
 import { DevSpecModal } from './components/DevSpecModal';
 import { SocialShareModal } from './components/SocialShareModal';
 import { HistoryDrawer } from './components/HistoryDrawer';
 import { CanineDiaryModal } from './components/CanineDiaryModal';
-import { DogTranslationResult, PersonalityId, ApiStatusResponse } from './types';
+import { DogTranslationResult, PackDebateResult, PersonalityId, ApiStatusResponse } from './types';
 import { PERSONALITIES } from './data/personalities';
 import { requestDogVoiceAudio } from './utils/audioEngine';
 import { AlertCircle } from 'lucide-react';
@@ -17,7 +18,9 @@ const LOCAL_STORAGE_KEY = 'translate_my_dog_history_v1';
 export default function App() {
   const [apiStatus, setApiStatus] = useState<ApiStatusResponse | null>(null);
   const [currentTranslation, setCurrentTranslation] = useState<DogTranslationResult | null>(null);
+  const [currentPackDebate, setCurrentPackDebate] = useState<PackDebateResult | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isPackModeLoading, setIsPackModeLoading] = useState<boolean>(false);
   const [scanningImage, setScanningImage] = useState<string | undefined>(undefined);
   const [activePersonality, setActivePersonality] = useState<PersonalityId>('dramatic-diva');
   const [error, setError] = useState<string | null>(null);
@@ -97,13 +100,16 @@ export default function App() {
     }
   };
 
+  // Solo dog translation flow
   const handleStartTranslation = async (
     imageData: { imageBase64?: string; imageUrl?: string },
     personality: PersonalityId,
     customContext: string
   ) => {
     setIsLoading(true);
+    setIsPackModeLoading(false);
     setError(null);
+    setCurrentPackDebate(null);
     setActivePersonality(personality);
     setScanningImage(imageData.imageBase64 || imageData.imageUrl);
 
@@ -162,8 +168,76 @@ export default function App() {
     }
   };
 
+  // Pack debate flow
+  const handleStartPackDebate = async (
+    imageData: { imageBase64?: string; imageUrl?: string },
+    disputeTopic: string
+  ) => {
+    setIsLoading(true);
+    setIsPackModeLoading(true);
+    setError(null);
+    setCurrentTranslation(null);
+    setScanningImage(imageData.imageBase64 || imageData.imageUrl);
+
+    try {
+      const res = await fetch('/api/translate-pack-debate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: imageData.imageBase64,
+          imageUrl: imageData.imageUrl,
+          disputeTopic,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to analyze pack debate with Gemini Vision.');
+      }
+
+      const result = await res.json();
+      const debateData: PackDebateResult = {
+        ...result.data,
+        imageUrl: imageData.imageBase64 || imageData.imageUrl || '',
+        timestamp: Date.now(),
+      };
+
+      setCurrentPackDebate(debateData);
+    } catch (err: any) {
+      console.error('Pack debate error:', err);
+      setError(err.message || 'An unexpected error occurred while generating pack debate.');
+    } finally {
+      setIsLoading(false);
+      setIsPackModeLoading(false);
+    }
+  };
+
+  const handleSaveDebateToDiary = (debate: PackDebateResult) => {
+    const summaryMonologue = `[Pack Debate: ${debate.title}]\n${debate.dialogue
+      .map((d) => `${d.speakerName}: "${d.line}"`)
+      .join('\n')}\n\nVerdict: ${debate.packVerdict}`;
+
+    const newDiaryEntry: DogTranslationResult = {
+      id: `debate_${Date.now()}`,
+      imageUrl: debate.imageUrl || '',
+      personality: 'dramatic-diva',
+      personalityName: 'Pack Debate Council',
+      monologue: summaryMonologue,
+      detectedMood: `Debating: ${debate.disputeTopic.slice(0, 40)}`,
+      visualClues: debate.participants.map((p) => `${p.name}: ${p.facialClue}`),
+      canineIqScore: '200 (Collective Pack IQ)',
+      suggestedAction: debate.packVerdict,
+      timestamp: Date.now(),
+      dogName: debate.title,
+      ownerNotes: `Pack debate with ${debate.participants.length} dogs.`,
+    };
+
+    saveToHistory(newDiaryEntry);
+  };
+
   const handleReset = () => {
     setCurrentTranslation(null);
+    setCurrentPackDebate(null);
     setError(null);
   };
 
@@ -196,7 +270,17 @@ export default function App() {
         )}
 
         {isLoading ? (
-          <ScanningLoader imageUrl={scanningImage} personality={activePersonality} />
+          <ScanningLoader
+            imageUrl={scanningImage}
+            personality={activePersonality}
+            isPackMode={isPackModeLoading}
+          />
+        ) : currentPackDebate ? (
+          <PackDebateViewer
+            debate={currentPackDebate}
+            onReset={handleReset}
+            onSaveToDiary={handleSaveDebateToDiary}
+          />
         ) : currentTranslation ? (
           <TranslationViewer
             translation={currentTranslation}
@@ -205,7 +289,11 @@ export default function App() {
             onOpenDiary={() => setIsDiaryOpen(true)}
           />
         ) : (
-          <HeroUploader onStartTranslation={handleStartTranslation} isLoading={isLoading} />
+          <HeroUploader
+            onStartTranslation={handleStartTranslation}
+            onStartPackDebate={handleStartPackDebate}
+            isLoading={isLoading}
+          />
         )}
       </main>
 
@@ -252,7 +340,10 @@ export default function App() {
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         history={history}
-        onSelectTranslation={(item) => setCurrentTranslation(item)}
+        onSelectTranslation={(item) => {
+          setCurrentTranslation(item);
+          setCurrentPackDebate(null);
+        }}
         onClearHistory={handleClearHistory}
         onOpenDiary={() => setIsDiaryOpen(true)}
       />
@@ -262,6 +353,7 @@ export default function App() {
         entries={history}
         onSelectEntry={(item) => {
           setCurrentTranslation(item);
+          setCurrentPackDebate(null);
           setIsDiaryOpen(false);
         }}
         onUpdateEntry={handleUpdateEntry}
@@ -269,6 +361,7 @@ export default function App() {
         onClearAll={handleClearHistory}
         onNewPhoto={() => {
           setCurrentTranslation(null);
+          setCurrentPackDebate(null);
           setIsDiaryOpen(false);
         }}
       />

@@ -85,3 +85,38 @@ export function playWebSpeechSynthesis(
     window.speechSynthesis.cancel();
   };
 }
+
+export async function playDialogueLine(
+  text: string,
+  personality: PersonalityId,
+  onEnd?: () => void,
+  onStart?: () => void
+): Promise<() => void> {
+  // Try ElevenLabs audio first
+  try {
+    const audioRes = await requestDogVoiceAudio(text, personality);
+    if (audioRes.source === 'elevenlabs' && audioRes.audioUrl) {
+      const audio = new Audio(audioRes.audioUrl);
+      if (onStart) onStart();
+      audio.onended = () => {
+        if (onEnd) onEnd();
+      };
+      audio.onerror = () => {
+        // Fallback to Web Speech
+        playWebSpeechSynthesis(text, personality, onEnd, onStart);
+      };
+      audio.play().catch(() => {
+        playWebSpeechSynthesis(text, personality, onEnd, onStart);
+      });
+      return () => {
+        audio.pause();
+        audio.currentTime = 0;
+      };
+    }
+  } catch {
+    // ignore
+  }
+
+  // Fallback to Web Speech
+  return playWebSpeechSynthesis(text, personality, onEnd, onStart);
+}
