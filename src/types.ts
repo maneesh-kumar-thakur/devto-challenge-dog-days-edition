@@ -36,6 +36,11 @@ export interface DogTranslationResult {
   audioUrl?: string;
   audioSource?: 'elevenlabs' | 'webspeech';
   timestamp: number;
+  // Diary enhancements
+  ownerNotes?: string;
+  pawRating?: number; // 1-5
+  isFavorite?: boolean;
+  tags?: string[];
 }
 
 export interface PresetDog {

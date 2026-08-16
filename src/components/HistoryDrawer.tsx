@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, History, Volume2, Trash2, Calendar, Sparkles } from 'lucide-react';
+import { X, History, Volume2, Trash2, Calendar, Sparkles, BookOpen } from 'lucide-react';
 import { DogTranslationResult } from '../types';
 import { PERSONALITIES } from '../data/personalities';
 
@@ -9,6 +9,7 @@ interface HistoryDrawerProps {
   history: DogTranslationResult[];
   onSelectTranslation: (item: DogTranslationResult) => void;
   onClearHistory: () => void;
+  onOpenDiary: () => void;
 }
 
 export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
@@ -17,6 +18,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
   history,
   onSelectTranslation,
   onClearHistory,
+  onOpenDiary,
 }) => {
   if (!isOpen) return null;
 
@@ -95,18 +97,32 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
         </div>
 
         {/* Footer */}
-        {history.length > 0 && (
-          <div className="border-t border-slate-800 pt-3 flex justify-between items-center">
-            <button
-              id="clear-history-btn"
-              onClick={onClearHistory}
-              className="inline-flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 font-medium transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> Clear History
-            </button>
-            <span className="text-[11px] text-slate-500">Stored locally in browser</span>
-          </div>
-        )}
+        <div className="border-t border-slate-800 pt-3 space-y-2.5">
+          <button
+            id="drawer-open-full-diary-btn"
+            onClick={() => {
+              onClose();
+              onOpenDiary();
+            }}
+            className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-600/80 to-rose-600/80 hover:from-amber-500 hover:to-rose-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Open Full Canine Diary & Scrapbook</span>
+          </button>
+
+          {history.length > 0 && (
+            <div className="flex justify-between items-center text-xs">
+              <button
+                id="clear-history-btn"
+                onClick={onClearHistory}
+                className="inline-flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 font-medium transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Clear History
+              </button>
+              <span className="text-[11px] text-slate-500">Stored locally in browser</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Share2, RotateCcw, Brain, CheckCircle, Eye, AlertCircle, Quote, MessageSquare } from 'lucide-react';
+import { Sparkles, Share2, RotateCcw, Brain, CheckCircle, Eye, AlertCircle, Quote, MessageSquare, BookOpen } from 'lucide-react';
 import { DogTranslationResult } from '../types';
 import { PERSONALITIES } from '../data/personalities';
 import { AudioVisualizerPlayer } from './AudioVisualizerPlayer';
@@ -8,19 +8,21 @@ interface TranslationViewerProps {
   translation: DogTranslationResult;
   onReset: () => void;
   onOpenShareModal: () => void;
+  onOpenDiary: () => void;
 }
 
 export const TranslationViewer: React.FC<TranslationViewerProps> = ({
   translation,
   onReset,
   onOpenShareModal,
+  onOpenDiary,
 }) => {
   const personalityInfo = PERSONALITIES[translation.personality];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
       {/* Top Banner Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           id="translate-another-btn"
           onClick={onReset}
@@ -30,6 +32,13 @@ export const TranslationViewer: React.FC<TranslationViewerProps> = ({
         </button>
 
         <div className="flex items-center gap-2">
+          <button
+            id="view-in-diary-btn"
+            onClick={onOpenDiary}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-colors"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-indigo-400" /> View in Diary
+          </button>
           <button
             id="share-meme-btn"
             onClick={onOpenShareModal}

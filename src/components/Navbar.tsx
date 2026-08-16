@@ -6,6 +6,7 @@ interface NavbarProps {
   apiStatus: ApiStatusResponse | null;
   onOpenSpecModal: () => void;
   onOpenHistory: () => void;
+  onOpenDiary: () => void;
   historyCount: number;
 }
 
@@ -13,6 +14,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   apiStatus,
   onOpenSpecModal,
   onOpenHistory,
+  onOpenDiary,
   historyCount,
 }) => {
   return (
@@ -70,6 +72,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </div>
 
+          {/* Canine Diary Button */}
+          <button
+            id="nav-diary-btn"
+            onClick={onOpenDiary}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-600/90 to-rose-600/90 hover:from-amber-500 hover:to-rose-500 text-white shadow-sm text-xs font-semibold transition-all hover:shadow-rose-500/25"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Canine Diary</span>
+            {historyCount > 0 && (
+              <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-white/25 text-[10px] text-white font-extrabold">
+                {historyCount}
+              </span>
+            )}
+          </button>
+
           {/* History Button */}
           <button
             id="nav-history-btn"
@@ -77,12 +94,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-medium transition-colors"
           >
             <History className="w-4 h-4 text-slate-400" />
-            <span className="hidden sm:inline">Pack History</span>
-            {historyCount > 0 && (
-              <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-indigo-500 text-[10px] text-white font-bold">
-                {historyCount}
-              </span>
-            )}
+            <span className="hidden sm:inline">History</span>
           </button>
 
           {/* Spec / Architecture Modal Button */}

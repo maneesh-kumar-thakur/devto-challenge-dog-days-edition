@@ -6,6 +6,7 @@ import { ScanningLoader } from './components/ScanningLoader';
 import { DevSpecModal } from './components/DevSpecModal';
 import { SocialShareModal } from './components/SocialShareModal';
 import { HistoryDrawer } from './components/HistoryDrawer';
+import { CanineDiaryModal } from './components/CanineDiaryModal';
 import { DogTranslationResult, PersonalityId, ApiStatusResponse } from './types';
 import { PERSONALITIES } from './data/personalities';
 import { requestDogVoiceAudio } from './utils/audioEngine';
@@ -25,6 +26,7 @@ export default function App() {
   const [isSpecModalOpen, setIsSpecModalOpen] = useState<boolean>(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+  const [isDiaryOpen, setIsDiaryOpen] = useState<boolean>(false);
   const [history, setHistory] = useState<DogTranslationResult[]>([]);
 
   // Load history & check server health on mount
@@ -46,7 +48,7 @@ export default function App() {
 
   const saveToHistory = (item: DogTranslationResult) => {
     setHistory((prev) => {
-      const updated = [item, ...prev.filter((i) => i.id !== item.id)].slice(0, 20);
+      const updated = [item, ...prev.filter((i) => i.id !== item.id)].slice(0, 30);
       try {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
       } catch (e) {
@@ -54,6 +56,36 @@ export default function App() {
       }
       return updated;
     });
+  };
+
+  const handleUpdateEntry = (updatedItem: DogTranslationResult) => {
+    setHistory((prev) => {
+      const updated = prev.map((item) => (item.id === updatedItem.id ? updatedItem : item));
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Could not save to localStorage:', e);
+      }
+      return updated;
+    });
+    if (currentTranslation?.id === updatedItem.id) {
+      setCurrentTranslation(updatedItem);
+    }
+  };
+
+  const handleDeleteEntry = (id: string) => {
+    setHistory((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Could not save to localStorage:', e);
+      }
+      return updated;
+    });
+    if (currentTranslation?.id === id) {
+      setCurrentTranslation(null);
+    }
   };
 
   const handleClearHistory = () => {
@@ -142,6 +174,7 @@ export default function App() {
         apiStatus={apiStatus}
         onOpenSpecModal={() => setIsSpecModalOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenDiary={() => setIsDiaryOpen(true)}
         historyCount={history.length}
       />
 
@@ -169,6 +202,7 @@ export default function App() {
             translation={currentTranslation}
             onReset={handleReset}
             onOpenShareModal={() => setIsShareModalOpen(true)}
+            onOpenDiary={() => setIsDiaryOpen(true)}
           />
         ) : (
           <HeroUploader onStartTranslation={handleStartTranslation} isLoading={isLoading} />
@@ -190,6 +224,12 @@ export default function App() {
             </a>
           </div>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsDiaryOpen(true)}
+              className="text-amber-400 hover:text-amber-300 transition-colors font-medium"
+            >
+              📖 Canine Thought Diary ({history.length})
+            </button>
             <span className="text-slate-400">Google Gemini Vision ✦ ElevenLabs Voice</span>
             <button
               onClick={() => setIsSpecModalOpen(true)}
@@ -214,6 +254,23 @@ export default function App() {
         history={history}
         onSelectTranslation={(item) => setCurrentTranslation(item)}
         onClearHistory={handleClearHistory}
+        onOpenDiary={() => setIsDiaryOpen(true)}
+      />
+      <CanineDiaryModal
+        isOpen={isDiaryOpen}
+        onClose={() => setIsDiaryOpen(false)}
+        entries={history}
+        onSelectEntry={(item) => {
+          setCurrentTranslation(item);
+          setIsDiaryOpen(false);
+        }}
+        onUpdateEntry={handleUpdateEntry}
+        onDeleteEntry={handleDeleteEntry}
+        onClearAll={handleClearHistory}
+        onNewPhoto={() => {
+          setCurrentTranslation(null);
+          setIsDiaryOpen(false);
+        }}
       />
     </div>
   );
