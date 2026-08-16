@@ -148,6 +148,8 @@ export default function App() {
         imageUrl: imageData.imageBase64 || imageData.imageUrl || '',
         personality,
         personalityName: PERSONALITIES[personality]?.name || personality,
+        identifiedBreed: dogData.identifiedBreed,
+        breedInsight: dogData.breedInsight,
         monologue: dogData.monologue,
         detectedMood: dogData.detectedMood,
         visualClues: dogData.visualClues || [],

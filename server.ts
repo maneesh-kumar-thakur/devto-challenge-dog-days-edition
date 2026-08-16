@@ -80,20 +80,24 @@ app.post('/api/translate-dog', async (req, res) => {
 
     const promptText = `
 You are the inner voice and mind-reader of the dog in this photograph.
-Carefully examine the dog's facial expression, eye focus, head tilt, ear positioning, mouth tension, posture, and surrounding environment.
+Carefully examine the dog's breed traits, facial expression, eye focus, head tilt, ear positioning, mouth tension, posture, and surrounding environment.
 
-Write a hilarious first-person inner monologue (2-3 punchy sentences, 30-50 words) capturing what this specific dog is thinking RIGHT NOW.
+1. Identify the dog's breed (or primary breed mix/appearance).
+2. Provide a witty, scientifically grounded 1-2 sentence "breed insight" analyzing how their breed heritage influences this exact behavior or micro-expression.
+3. Write a hilarious first-person inner monologue (2-3 punchy sentences, 30-50 words) capturing what this specific dog is thinking RIGHT NOW.
 
 Personality to embody: ${chosenPersona}.
 ${customContext ? `Extra context provided by owner: "${customContext}".` : ''}
 
 Rules:
-1. Speak ONLY as the dog in first person ("I", "my human", "my staff"). No narration, no "The dog thinks".
-2. Anchor the monologue in REAL visual details you see in the photo (what they are looking at, their ear position, facial expression, items nearby).
+1. Speak ONLY as the dog in first person ("I", "my human", "my staff") for the monologue. No narration, no "The dog thinks".
+2. Anchor the monologue and clues in REAL visual details you see in the photo (what they are looking at, their ear position, facial expression, items nearby).
 3. Be witty, creative, and wholesome.
 
 Respond in valid strict JSON matching this exact structure:
 {
+  "identifiedBreed": "Identified Breed (e.g., Siberian Husky, Golden Retriever, French Bulldog mix)",
+  "breedInsight": "Witty breed-specific behavioral insight explaining this expression or trait",
   "monologue": "The monologue string here",
   "detectedMood": "Short funny mood title (e.g., 94% Betrayed By Diet Kibble)",
   "visualClues": [
@@ -209,6 +213,8 @@ Respond in valid strict JSON matching this exact structure:
       // Graceful archetype-aware fallback if upstream model was temporarily unavailable
       const archetypeFallbacks: Record<string, any> = {
         'dramatic-diva': {
+          identifiedBreed: "Husky / Spicily Expressive Mix",
+          breedInsight: "Spitz and vocal working dog heritage triggers extreme vocal volume and theatrical indignation when routines deviate by >0.5%.",
           monologue: "Excuse me? Are we seriously doing a photo shoot right now without offering artisanal poultry strips first? The lighting is atrocious and my agent will hear about this indignity.",
           detectedMood: "Offended By Lack of Organic Poultry",
           visualClues: ["High-angle gaze of utter moral superiority", "Ears tilted in mild existential disgust", "Posture radiating unpaid model energy"],
@@ -216,6 +222,8 @@ Respond in valid strict JSON matching this exact structure:
           suggestedAction: "Apologize immediately and present freeze-dried liver on a silver saucer.",
         },
         'chill-bro': {
+          identifiedBreed: "Golden Retriever / Lab Mix",
+          breedInsight: "Bred for gentle retrieval and high serotonin; facial muscles default to peaceful zen contentment under any lighting condition.",
           monologue: "Bro... listen to the carpet. It speaks of a sunbeam that was here three hours ago. If we just vibe right here, the universe will manifest cheese. Peace, love, and belly rubs.",
           detectedMood: "100% Sunbeam Alignment",
           visualClues: ["Eyes half-mast in meditative trance", "Paws totally limp in maximum chill mode", "Zero thoughts, maximum peaceful vibes"],
@@ -223,6 +231,8 @@ Respond in valid strict JSON matching this exact structure:
           suggestedAction: "Do not disrupt the frequency. Gently slide a biscuit within tongue reach.",
         },
         'anxious-overthinker': {
+          identifiedBreed: "Terrier / Shepherd Guard Mix",
+          breedInsight: "High working drive and sentinel lineage cause hyper-dilated pupils and rapid sound-triangulation ear movement.",
           monologue: "Did you hear that? That leaf outside just shifted 3 millimeters. What if the mail carrier has mechanized reinforcements? I must monitor the perimeter while trembling vigilantly.",
           detectedMood: "Existential Treat Calculation",
           visualClues: ["Wide hyper-focused satellite ears", "High-tension brow furrow", "Vigilant posture anticipating mystery noises"],
@@ -230,6 +240,8 @@ Respond in valid strict JSON matching this exact structure:
           suggestedAction: "Reassure them that the ceiling fan is not a hostile bird.",
         },
         'regal-aristocrat': {
+          identifiedBreed: "Cavalier / Poodle Noble Heritage",
+          breedInsight: "Centuries of lap companionship and royal bedchamber pampering have hardwired aristocratic entitlement directly into their chin elevation.",
           monologue: "Ah, the human has brought out the pocket rectangle again. Do inform the butler that my afternoon nap was interrupted by 47 seconds and reparations in roasted duck are mandatory.",
           detectedMood: "Judging Your Lineage",
           visualClues: ["Aristocratic chin elevation", "Regal chest puff of high pedigree", "Eyes projecting mild pity for the peasant staff"],
@@ -237,6 +249,8 @@ Respond in valid strict JSON matching this exact structure:
           suggestedAction: "Address them with proper royal titles and fluff the velvet cushion.",
         },
         'excited-puppy': {
+          identifiedBreed: "Corgi / Border Collie Energy Dynamo",
+          breedInsight: "Pastoral herding instinct supercharges motor coordination into explosive zoomies and perpetual jaw-smiling enthusiasm.",
           monologue: "OMG OMG A CAMERA! ARE WE PLAYING? CAN I EAT IT? I LOVE YOU SO MUCH! LOOK AT MY TAIL GO WHOOSH! SQUIRREL! BALL! CHEESE! ZOOMIES INCOMING!",
           detectedMood: "Maximum Zoomie Velocity",
           visualClues: ["Pupils dilated to absolute maximum joy", "Mouth open in ready-to-chomp grin", "Spring-loaded paws ready for liftoff"],
@@ -244,6 +258,8 @@ Respond in valid strict JSON matching this exact structure:
           suggestedAction: "Throw the ball immediately or prepare for warp-speed living room laps.",
         },
         'undercover-detective': {
+          identifiedBreed: "Beagle / Hound Scent Investigator",
+          breedInsight: "Olfactory lobe dominance creates intense furrowed brow concentration when tracking mysterious kitchen floor crumb trails.",
           monologue: "The scene is clean, almost too clean. The treat jar lid was rotated 15 degrees clockwise at 14:00 hours. The cat claims an alibi, but the crumbs on the rug tell a much darker story.",
           detectedMood: "Investigating Missing Bacon Conspiracies",
           visualClues: ["Squinted investigative glare", "Nose twitching for forensic crumb evidence", "Suspicious side-eye locked on the kitchen counter"],
@@ -266,6 +282,8 @@ Respond in valid strict JSON matching this exact structure:
     res.json({
       success: true,
       data: {
+        identifiedBreed: parsedResult.identifiedBreed || "Canine Goodus Maxima",
+        breedInsight: parsedResult.breedInsight || "Natural pack instincts dictate optimal snack extraction from attentive humans.",
         monologue: parsedResult.monologue || "I demand to speak to whoever is in charge of treat distribution immediately.",
         detectedMood: parsedResult.detectedMood || "Vigilant Treat Surveillance",
         visualClues: parsedResult.visualClues || ["Direct ocular lock-on", "Ears primed for snack wrappers"],

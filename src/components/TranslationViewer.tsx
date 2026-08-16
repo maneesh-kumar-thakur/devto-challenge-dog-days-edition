@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Share2, RotateCcw, Brain, CheckCircle, Eye, AlertCircle, Quote, MessageSquare, BookOpen } from 'lucide-react';
+import { Sparkles, Share2, RotateCcw, Brain, CheckCircle, Eye, AlertCircle, Quote, MessageSquare, BookOpen, Dna, Award } from 'lucide-react';
 import { DogTranslationResult } from '../types';
 import { PERSONALITIES } from '../data/personalities';
 import { AudioVisualizerPlayer } from './AudioVisualizerPlayer';
@@ -51,7 +51,7 @@ export const TranslationViewer: React.FC<TranslationViewerProps> = ({
 
       {/* Main Dog Card with Speech Bubble */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-sm">
-        {/* Left Column: Dog Photo + Mood Badge */}
+        {/* Left Column: Dog Photo + Mood & Breed Badges */}
         <div className="md:col-span-5 space-y-4">
           <div className="relative rounded-2xl overflow-hidden border-2 border-slate-700/80 shadow-xl aspect-square group">
             <img
@@ -64,6 +64,14 @@ export const TranslationViewer: React.FC<TranslationViewerProps> = ({
               <span>{personalityInfo?.emoji || '🐶'}</span>
               <span>{personalityInfo?.name || translation.personalityName}</span>
             </div>
+
+            {/* Identified Breed Top Right Pill */}
+            {translation.identifiedBreed && (
+              <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-indigo-950/90 backdrop-blur-md border border-indigo-500/50 text-[11px] font-bold text-indigo-200 flex items-center gap-1 shadow-lg max-w-[55%] truncate">
+                <Dna className="w-3 h-3 text-indigo-400 shrink-0" />
+                <span className="truncate">{translation.identifiedBreed}</span>
+              </div>
+            )}
 
             {/* Mood bottom pill */}
             <div className="absolute bottom-3 inset-x-3 p-2.5 rounded-xl bg-slate-950/90 backdrop-blur-md border border-slate-800 text-center">
@@ -88,8 +96,8 @@ export const TranslationViewer: React.FC<TranslationViewerProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Dog's Monologue + Visual Analysis + Audio Player */}
-        <div className="md:col-span-7 flex flex-col justify-between space-y-5">
+        {/* Right Column: Dog's Monologue + Breed Insight + Visual Analysis + Audio Player */}
+        <div className="md:col-span-7 flex flex-col justify-between space-y-4">
           {/* Comic Thought Bubble */}
           <div className="relative bg-gradient-to-br from-indigo-950/40 via-slate-900 to-slate-950 border-2 border-indigo-500/40 rounded-3xl p-6 shadow-xl space-y-3">
             <div className="flex items-center justify-between text-indigo-400 text-xs font-bold uppercase tracking-wider">
@@ -113,6 +121,27 @@ export const TranslationViewer: React.FC<TranslationViewerProps> = ({
               </div>
             )}
           </div>
+
+          {/* Breed Insight Section */}
+          {(translation.identifiedBreed || translation.breedInsight) && (
+            <div className="bg-gradient-to-r from-indigo-950/50 via-slate-900/90 to-purple-950/40 border border-indigo-500/30 rounded-2xl p-4 space-y-1.5 shadow-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                  <Dna className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Breed Insight & Heritage:</span>
+                </div>
+                {translation.identifiedBreed && (
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-indigo-900/60 text-indigo-200 border border-indigo-700/50">
+                    {translation.identifiedBreed}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-200 leading-relaxed">
+                {translation.breedInsight ||
+                  'Natural working and companion ancestry influences this canine gaze and alert posture.'}
+              </p>
+            </div>
+          )}
 
           {/* Visual Evidence (What Gemini Vision Saw) */}
           <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-4 space-y-2">

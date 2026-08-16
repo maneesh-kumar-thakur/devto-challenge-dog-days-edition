@@ -116,6 +116,27 @@ export async function generateSocialCardBlob(translation: DogTranslationResult):
 
     ctx.fillStyle = '#38BDF8'; // sky-400
     ctx.fillText(moodText, moodX + 20, moodY + 29);
+
+    // Breed badge top-right inside image (if available)
+    if (translation.identifiedBreed) {
+      const breedText = `🧬 ${translation.identifiedBreed}`;
+      ctx.font = '600 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      const bTextWidth = ctx.measureText(breedText).width;
+      const bBadgeW = bTextWidth + 32;
+      const bBadgeH = 40;
+      const bX = imgX + imgW - bBadgeW - 24;
+      const bY = imgY + 24;
+
+      roundRect(ctx, bX, bY, bBadgeW, bBadgeH, 12);
+      ctx.fillStyle = 'rgba(30, 27, 75, 0.85)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#C7D2FE';
+      ctx.fillText(breedText, bX + 16, bY + 26);
+    }
   } catch (err) {
     console.warn('Could not draw image to canvas:', err);
   }

@@ -33,6 +33,8 @@ export interface DogTranslationResult {
   visualClues: string[];
   canineIqScore: string;
   suggestedAction: string;
+  identifiedBreed?: string;
+  breedInsight?: string;
   audioUrl?: string;
   audioSource?: 'elevenlabs' | 'webspeech';
   timestamp: number;

@@ -58,10 +58,9 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
   const [editNotes, setEditNotes] = useState<string>('');
   const [editDogName, setEditDogName] = useState<string>('');
 
-  if (!isOpen) return null;
-
   // Filtered entries
   const filteredEntries = useMemo(() => {
+    if (!isOpen) return [];
     return entries.filter((item) => {
       if (favoritesOnly && !item.isFavorite) return false;
       if (selectedPersonalityFilter !== 'all' && item.personality !== selectedPersonalityFilter) return false;
@@ -78,12 +77,12 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
       }
       return true;
     });
-  }, [entries, favoritesOnly, selectedPersonalityFilter, searchQuery]);
+  }, [entries, favoritesOnly, selectedPersonalityFilter, searchQuery, isOpen]);
 
   // Analytics computations
   const analytics = useMemo(() => {
     const total = entries.length;
-    if (total === 0) {
+    if (!isOpen || total === 0) {
       return {
         total: 0,
         personalityCounts: {},
@@ -134,7 +133,9 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
       treatDeficitIndex: `${treatDeficitNum}%`,
       happinessScore: `${happinessNum}%`,
     };
-  }, [entries]);
+  }, [entries, isOpen]);
+
+  if (!isOpen) return null;
 
   const handleToggleFavorite = (item: DogTranslationResult, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -513,6 +514,16 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
                             {item.monologue}
                             <span className="text-indigo-400 text-lg font-serif not-italic ml-1">”</span>
                           </div>
+
+                          {/* Breed Insight (if available) */}
+                          {(item.identifiedBreed || item.breedInsight) && (
+                            <div className="text-[11px] text-indigo-200 bg-indigo-950/40 border border-indigo-800/40 rounded-lg p-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                              <span className="font-semibold text-indigo-300">
+                                🧬 {item.identifiedBreed ? `${item.identifiedBreed}: ` : 'Breed Insight: '}
+                                <span className="font-normal text-slate-300">{item.breedInsight}</span>
+                              </span>
+                            </div>
+                          )}
 
                           {/* Clues Pill Row */}
                           <div className="flex flex-wrap gap-1.5 text-[11px]">
