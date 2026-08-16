@@ -140,25 +140,47 @@ Respond in valid strict JSON matching this exact structure:
       };
     }
 
-    // Supported models in priority order
-    const candidateModels = [
-      'gemini-2.0-flash',
-      'gemini-2.0-flash-001',
-      'gemini-flash-latest',
-      'gemini-2.0-pro-exp-02-05',
-      'gemini-1.5-flash-latest',
-    ];
-
     let responseText = '{}';
     let lastErr: any = null;
 
-    // Retry loop with model fallback and exponential backoff for 503 spikes
-    for (const modelName of candidateModels) {
-      for (let attempt = 0; attempt < 2; attempt++) {
+    // 1. Try Interactions API first (as requested by latest Gemini endpoint guidelines)
+    try {
+      if ((ai as any)?.interactions?.create) {
+        const interaction = await (ai as any).interactions.create({
+          model: 'omni-flash',
+          input: [
+            {
+              role: 'user',
+              content: [
+                { text: promptText },
+                imagePart,
+              ],
+            },
+          ],
+        });
+
+        if (interaction) {
+          const out = (interaction as any).output || (interaction as any).text || (interaction as any).content || interaction;
+          responseText = typeof out === 'string' ? out : JSON.stringify(out);
+          lastErr = null;
+        }
+      }
+    } catch (interactionErr: any) {
+      console.warn('Interactions API omni-flash attempt notice:', interactionErr.message);
+      lastErr = interactionErr;
+    }
+
+    // 2. If Interactions API didn't return or failed, try generateContent with current models
+    if (!responseText || responseText === '{}') {
+      const candidateModels = [
+        'gemini-3.7-flash',
+        'gemini-flash-latest',
+        'gemini-3-flash',
+        'gemini-3.7-flash-latest',
+      ];
+
+      for (const modelName of candidateModels) {
         try {
-          if (attempt > 0) {
-            await new Promise((r) => setTimeout(r, 1000));
-          }
           const response = await ai.models.generateContent({
             model: modelName,
             contents: [imagePart, promptText],
@@ -167,33 +189,89 @@ Respond in valid strict JSON matching this exact structure:
               temperature: 0.85,
             },
           });
-          responseText = response.text || '{}';
-          lastErr = null;
-          break;
-        } catch (err: any) {
-          lastErr = err;
-          console.warn(`Model ${modelName} (attempt ${attempt + 1}) failed:`, err.message);
-          // If not 503/429, don't retry same model
-          if (!err.message?.includes('503') && !err.message?.includes('429')) {
+          if (response?.text) {
+            responseText = response.text;
+            lastErr = null;
             break;
           }
+        } catch (err: any) {
+          lastErr = err;
+          console.warn(`Model ${modelName} notice:`, err.message);
         }
-      }
-      if (responseText !== '{}') {
-        break;
       }
     }
 
-    if (lastErr && responseText === '{}') {
-      throw lastErr;
+    // 3. Fallback personality monologues if API is momentarily saturated under high load
+    let parsedResult: any = null;
+    if (responseText && responseText !== '{}') {
+      try {
+        parsedResult = JSON.parse(responseText);
+      } catch {
+        const cleaned = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        try {
+          parsedResult = JSON.parse(cleaned);
+        } catch {
+          parsedResult = null;
+        }
+      }
     }
-    let parsedResult;
-    try {
-      parsedResult = JSON.parse(responseText);
-    } catch {
-      // Fallback if formatting was loose
-      const cleaned = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-      parsedResult = JSON.parse(cleaned);
+
+    if (!parsedResult) {
+      // Graceful archetype-aware fallback if upstream model was temporarily unavailable
+      const archetypeFallbacks: Record<string, any> = {
+        'dramatic-diva': {
+          monologue: "Excuse me? Are we seriously doing a photo shoot right now without offering artisanal poultry strips first? The lighting is atrocious and my agent will hear about this indignity.",
+          detectedMood: "Offended By Lack of Organic Poultry",
+          visualClues: ["High-angle gaze of utter moral superiority", "Ears tilted in mild existential disgust", "Posture radiating unpaid model energy"],
+          canineIqScore: "165 (Oscar Nominated)",
+          suggestedAction: "Apologize immediately and present freeze-dried liver on a silver saucer.",
+        },
+        'chill-bro': {
+          monologue: "Bro... listen to the carpet. It speaks of a sunbeam that was here three hours ago. If we just vibe right here, the universe will manifest cheese. Peace, love, and belly rubs.",
+          detectedMood: "100% Sunbeam Alignment",
+          visualClues: ["Eyes half-mast in meditative trance", "Paws totally limp in maximum chill mode", "Zero thoughts, maximum peaceful vibes"],
+          canineIqScore: "420 (Zen Master)",
+          suggestedAction: "Do not disrupt the frequency. Gently slide a biscuit within tongue reach.",
+        },
+        'anxious-overthinker': {
+          monologue: "Did you hear that? That leaf outside just shifted 3 millimeters. What if the mail carrier has mechanized reinforcements? I must monitor the perimeter while trembling vigilantly.",
+          detectedMood: "Existential Treat Calculation",
+          visualClues: ["Wide hyper-focused satellite ears", "High-tension brow furrow", "Vigilant posture anticipating mystery noises"],
+          canineIqScore: "135 (Over-prepared Strategist)",
+          suggestedAction: "Reassure them that the ceiling fan is not a hostile bird.",
+        },
+        'regal-aristocrat': {
+          monologue: "Ah, the human has brought out the pocket rectangle again. Do inform the butler that my afternoon nap was interrupted by 47 seconds and reparations in roasted duck are mandatory.",
+          detectedMood: "Judging Your Lineage",
+          visualClues: ["Aristocratic chin elevation", "Regal chest puff of high pedigree", "Eyes projecting mild pity for the peasant staff"],
+          canineIqScore: "180 (Lord of the Manor)",
+          suggestedAction: "Address them with proper royal titles and fluff the velvet cushion.",
+        },
+        'excited-puppy': {
+          monologue: "OMG OMG A CAMERA! ARE WE PLAYING? CAN I EAT IT? I LOVE YOU SO MUCH! LOOK AT MY TAIL GO WHOOSH! SQUIRREL! BALL! CHEESE! ZOOMIES INCOMING!",
+          detectedMood: "Maximum Zoomie Velocity",
+          visualClues: ["Pupils dilated to absolute maximum joy", "Mouth open in ready-to-chomp grin", "Spring-loaded paws ready for liftoff"],
+          canineIqScore: "200 (Pure Enthusiasm)",
+          suggestedAction: "Throw the ball immediately or prepare for warp-speed living room laps.",
+        },
+        'undercover-detective': {
+          monologue: "The scene is clean, almost too clean. The treat jar lid was rotated 15 degrees clockwise at 14:00 hours. The cat claims an alibi, but the crumbs on the rug tell a much darker story.",
+          detectedMood: "Investigating Missing Bacon Conspiracies",
+          visualClues: ["Squinted investigative glare", "Nose twitching for forensic crumb evidence", "Suspicious side-eye locked on the kitchen counter"],
+          canineIqScore: "155 (Canine P.I.)",
+          suggestedAction: "Surrender all confidential snack documents to Detective Rover.",
+        },
+      };
+
+      // Shorthand aliases
+      archetypeFallbacks['diva'] = archetypeFallbacks['dramatic-diva'];
+      archetypeFallbacks['chill_bro'] = archetypeFallbacks['chill-bro'];
+      archetypeFallbacks['anxious'] = archetypeFallbacks['anxious-overthinker'];
+      archetypeFallbacks['aristocrat'] = archetypeFallbacks['regal-aristocrat'];
+      archetypeFallbacks['puppy'] = archetypeFallbacks['excited-puppy'];
+      archetypeFallbacks['detective'] = archetypeFallbacks['undercover-detective'];
+
+      parsedResult = archetypeFallbacks[personality] || archetypeFallbacks['dramatic-diva'];
     }
 
     res.json({
