@@ -17,6 +17,7 @@ import { BarChart3, PieChart as PieChartIcon, Activity } from 'lucide-react';
 interface MoodDistributionChartProps {
   moodData: MoodCategoryData[];
   totalEntries: number;
+  onSelectMoodCategory?: (category: string) => void;
 }
 
 // Custom Tooltip component for Recharts
@@ -55,6 +56,7 @@ const CustomMoodTooltip: React.FC<TooltipProps> = ({ active, payload }) => {
 export const MoodDistributionChart: React.FC<MoodDistributionChartProps> = ({
   moodData,
   totalEntries,
+  onSelectMoodCategory,
 }) => {
   const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -84,7 +86,7 @@ export const MoodDistributionChart: React.FC<MoodDistributionChartProps> = ({
             <span>Detected Mood & Emotional Spectrum</span>
           </h3>
           <p className="text-[11px] text-slate-400">
-            Psychological breakdown based on canine vision micro-expressions
+            Psychological breakdown based on canine vision micro-expressions {onSelectMoodCategory ? '(click to filter scrapbook)' : ''}
           </p>
         </div>
 
@@ -124,9 +126,18 @@ export const MoodDistributionChart: React.FC<MoodDistributionChartProps> = ({
             <BarChart
               data={moodData}
               margin={{ top: 10, right: 10, left: -20, bottom: 25 }}
+              onClick={(state: unknown) => {
+                const s = state as { activePayload?: Array<{ payload: MoodCategoryData }> } | null;
+                if (s && s.activePayload && s.activePayload.length && onSelectMoodCategory) {
+                  const clickedItem = s.activePayload[0].payload;
+                  if (clickedItem && clickedItem.category) {
+                    onSelectMoodCategory(clickedItem.category);
+                  }
+                }
+              }}
               onMouseMove={(state) => {
-                if (state.activeTooltipIndex !== undefined) {
-                  setActiveIndex(state.activeTooltipIndex);
+                if (state && state.activeTooltipIndex !== undefined) {
+                  setActiveIndex(Number(state.activeTooltipIndex));
                 }
               }}
               onMouseLeave={() => setActiveIndex(null)}
@@ -164,7 +175,7 @@ export const MoodDistributionChart: React.FC<MoodDistributionChartProps> = ({
                 allowDecimals={false}
               />
               <Tooltip content={<CustomMoodTooltip />} />
-              <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48}>
+              <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48} className={onSelectMoodCategory ? 'cursor-pointer' : ''}>
                 {moodData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
@@ -188,6 +199,13 @@ export const MoodDistributionChart: React.FC<MoodDistributionChartProps> = ({
                 paddingAngle={4}
                 dataKey="count"
                 nameKey="displayName"
+                onClick={(entryData: unknown) => {
+                  const item = entryData as { category?: string } | null;
+                  if (onSelectMoodCategory && item && item.category) {
+                    onSelectMoodCategory(item.category);
+                  }
+                }}
+                className={onSelectMoodCategory ? 'cursor-pointer' : ''}
               >
                 {nonZeroData.map((entry, index) => (
                   <Cell key={`pie-cell-${index}`} fill={entry.color} stroke="#0f172a" strokeWidth={2} />
@@ -214,9 +232,12 @@ export const MoodDistributionChart: React.FC<MoodDistributionChartProps> = ({
       {/* Quick Summary Chips */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-900">
         {moodData.slice(0, 3).map((item) => (
-          <div
+          <button
             key={item.category}
-            className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between"
+            onClick={() => onSelectMoodCategory && onSelectMoodCategory(item.category)}
+            className={`p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between text-left transition-all ${
+              onSelectMoodCategory ? 'hover:border-indigo-500/50 hover:bg-slate-800/80 cursor-pointer' : ''
+            }`}
           >
             <div className="flex items-center gap-2 truncate">
               <span className="text-sm">{item.emoji}</span>
@@ -226,12 +247,12 @@ export const MoodDistributionChart: React.FC<MoodDistributionChartProps> = ({
               </div>
             </div>
             <span
-              className="text-xs font-extrabold px-2 py-0.5 rounded-md"
+              className="text-xs font-extrabold px-2 py-0.5 rounded-md shrink-0"
               style={{ backgroundColor: `${item.color}20`, color: item.color }}
             >
               {item.percentage}%
             </span>
-          </div>
+          </button>
         ))}
       </div>
     </div>

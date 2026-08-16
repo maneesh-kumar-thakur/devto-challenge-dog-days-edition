@@ -27,7 +27,8 @@ import { DogTranslationResult, PersonalityId } from '../types';
 import { PERSONALITIES, PERSONALITY_LIST } from '../data/personalities';
 import { playWebSpeechSynthesis } from '../utils/audioEngine';
 import { exportDiaryToPdf } from '../utils/pdfExport';
-import { calculateMoodDistribution } from '../utils/moodAnalytics';
+import { calculateMoodDistribution, STANDARD_MOOD_TAXONOMY } from '../utils/moodAnalytics';
+import { filterDiaryEntries, extractUniqueBreeds } from '../utils/diaryFilters';
 import { MoodDistributionChart } from './MoodDistributionChart';
 
 interface CanineDiaryModalProps {
@@ -53,7 +54,9 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'timeline' | 'analytics'>('timeline');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMoodFilter, setSelectedMoodFilter] = useState<string>('all');
   const [selectedPersonalityFilter, setSelectedPersonalityFilter] = useState<string>('all');
+  const [selectedBreedFilter, setSelectedBreedFilter] = useState<string>('all');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
 
@@ -63,26 +66,38 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
   const [editDogName, setEditDogName] = useState<string>('');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
-  // Filtered entries
+  // Available unique breeds from entries
+  const availableBreeds = useMemo(() => {
+    return extractUniqueBreeds(entries);
+  }, [entries]);
+
+  // Filtered entries using unified filter helper
   const filteredEntries = useMemo(() => {
     if (!isOpen) return [];
-    return entries.filter((item) => {
-      if (favoritesOnly && !item.isFavorite) return false;
-      if (selectedPersonalityFilter !== 'all' && item.personality !== selectedPersonalityFilter) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesMonologue = item.monologue.toLowerCase().includes(q);
-        const matchesMood = item.detectedMood.toLowerCase().includes(q);
-        const matchesName = item.dogName?.toLowerCase().includes(q);
-        const matchesNotes = item.ownerNotes?.toLowerCase().includes(q);
-        const matchesClues = item.visualClues?.some((c) => c.toLowerCase().includes(q));
-        if (!matchesMonologue && !matchesMood && !matchesName && !matchesNotes && !matchesClues) {
-          return false;
-        }
-      }
-      return true;
+    return filterDiaryEntries(entries, {
+      searchQuery,
+      moodFilter: selectedMoodFilter,
+      personalityFilter: selectedPersonalityFilter,
+      breedFilter: selectedBreedFilter,
+      favoritesOnly,
     });
-  }, [entries, favoritesOnly, selectedPersonalityFilter, searchQuery, isOpen]);
+  }, [entries, searchQuery, selectedMoodFilter, selectedPersonalityFilter, selectedBreedFilter, favoritesOnly, isOpen]);
+
+  const hasActiveFilters = Boolean(
+    searchQuery.trim() ||
+    selectedMoodFilter !== 'all' ||
+    selectedPersonalityFilter !== 'all' ||
+    selectedBreedFilter !== 'all' ||
+    favoritesOnly
+  );
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setSelectedMoodFilter('all');
+    setSelectedPersonalityFilter('all');
+    setSelectedBreedFilter('all');
+    setFavoritesOnly(false);
+  };
 
   // Analytics computations
   const analytics = useMemo(() => {
@@ -298,90 +313,238 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
         {activeTab === 'timeline' && (
           <div className="flex-1 flex flex-col min-h-0">
             {/* Filter & Search Bar */}
-            <div className="p-4 sm:px-6 bg-slate-900/90 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
-              {/* Search Field */}
-              <div className="relative flex-1 min-w-[200px] max-w-md">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search thoughts, mood, dog name, clues..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9.5 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
-                />
+            <div className="p-4 sm:px-6 bg-slate-900/90 border-b border-slate-800/80 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {/* Search Field */}
+                <div className="relative flex-1 min-w-[200px] max-w-sm">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    id="diary-search-input"
+                    type="text"
+                    placeholder="Search thoughts, breed, mood, notes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9.5 pr-8 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Controls Row */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 flex-wrap">
+                  {/* Mood Filter Dropdown */}
+                  <select
+                    id="filter-mood-select"
+                    value={selectedMoodFilter}
+                    onChange={(e) => setSelectedMoodFilter(e.target.value)}
+                    className={`bg-slate-950 border text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-indigo-500 shrink-0 transition-colors ${
+                      selectedMoodFilter !== 'all'
+                        ? 'border-indigo-500 text-indigo-300 font-semibold'
+                        : 'border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <option value="all">All Moods</option>
+                    {STANDARD_MOOD_TAXONOMY.map((m) => (
+                      <option key={m.key} value={m.key}>
+                        {m.emoji} {m.displayName}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Personality Archetype Dropdown */}
+                  <select
+                    id="filter-personality-select"
+                    value={selectedPersonalityFilter}
+                    onChange={(e) => setSelectedPersonalityFilter(e.target.value)}
+                    className={`bg-slate-950 border text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-indigo-500 shrink-0 transition-colors ${
+                      selectedPersonalityFilter !== 'all'
+                        ? 'border-indigo-500 text-indigo-300 font-semibold'
+                        : 'border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <option value="all">All Archetypes</option>
+                    {PERSONALITY_LIST.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.emoji} {p.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Breed Dropdown Filter */}
+                  <select
+                    id="filter-breed-select"
+                    value={selectedBreedFilter}
+                    onChange={(e) => setSelectedBreedFilter(e.target.value)}
+                    className={`bg-slate-950 border text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-indigo-500 shrink-0 transition-colors max-w-[160px] truncate ${
+                      selectedBreedFilter !== 'all'
+                        ? 'border-indigo-500 text-indigo-300 font-semibold'
+                        : 'border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <option value="all">All Breeds</option>
+                    {availableBreeds.map((breed) => (
+                      <option key={breed} value={breed}>
+                        🐕 {breed}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Favorites Toggle */}
+                  <button
+                    id="filter-favorites-btn"
+                    onClick={() => setFavoritesOnly(!favoritesOnly)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all shrink-0 ${
+                      favoritesOnly
+                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <Star className={`w-3.5 h-3.5 ${favoritesOnly ? 'fill-amber-400 text-amber-400' : ''}`} />
+                    <span>Starred</span>
+                  </button>
+
+                  {/* Export & New Photo Action Buttons */}
+                  {entries.length > 0 && (
+                    <>
+                      <button
+                        id="export-diary-pdf-btn"
+                        onClick={handleExportPdf}
+                        disabled={isExportingPdf}
+                        title="Download Canine Diary as Printable PDF Keepsake"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-xs transition-all shrink-0 shadow-md border border-indigo-400/30 disabled:opacity-50"
+                      >
+                        {isExportingPdf ? (
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <FileText className="w-3.5 h-3.5" />
+                        )}
+                        <span>Export PDF</span>
+                      </button>
+
+                      <button
+                        id="export-diary-txt-btn"
+                        onClick={handleExportDiary}
+                        title="Export Diary Entries as Text File"
+                        className="p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-colors shrink-0"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    id="diary-add-entry-btn"
+                    onClick={() => {
+                      onClose();
+                      onNewPhoto();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all shrink-0 shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Translate New Photo</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Filter Controls */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-                {/* Favorites Toggle */}
-                <button
-                  id="filter-favorites-btn"
-                  onClick={() => setFavoritesOnly(!favoritesOnly)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all shrink-0 ${
-                    favoritesOnly
-                      ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <Star className={`w-3.5 h-3.5 ${favoritesOnly ? 'fill-amber-400 text-amber-400' : ''}`} />
-                  <span>Starred</span>
-                </button>
+              {/* Active Filter Badges & Count Row */}
+              {hasActiveFilters && (
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/60 text-xs">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-slate-400 font-medium text-[11px] mr-1">
+                      Showing {filteredEntries.length} of {entries.length} entries:
+                    </span>
 
-                {/* Personality Dropdown */}
-                <select
-                  value={selectedPersonalityFilter}
-                  onChange={(e) => setSelectedPersonalityFilter(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-indigo-500 shrink-0"
-                >
-                  <option value="all">All Archetypes</option>
-                  {PERSONALITY_LIST.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.emoji} {p.name}
-                    </option>
-                  ))}
-                </select>
+                    {/* Search query chip */}
+                    {searchQuery.trim() && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-[11px]">
+                        <span>🔍 "{searchQuery}"</span>
+                        <button
+                          onClick={() => setSearchQuery('')}
+                          className="hover:text-rose-400 p-0.5"
+                          title="Clear search"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
 
-                {/* Export & New Photo Action Buttons */}
-                {entries.length > 0 && (
-                  <>
-                    <button
-                      id="export-diary-pdf-btn"
-                      onClick={handleExportPdf}
-                      disabled={isExportingPdf}
-                      title="Download Canine Diary as Printable PDF Keepsake"
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-xs transition-all shrink-0 shadow-md border border-indigo-400/30 disabled:opacity-50"
-                    >
-                      {isExportingPdf ? (
-                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <FileText className="w-3.5 h-3.5" />
-                      )}
-                      <span>Export PDF</span>
-                    </button>
+                    {/* Mood Filter Chip */}
+                    {selectedMoodFilter !== 'all' && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 text-[11px]">
+                        <span>
+                          Mood: {STANDARD_MOOD_TAXONOMY.find((m) => m.key === selectedMoodFilter)?.displayName || selectedMoodFilter}
+                        </span>
+                        <button
+                          onClick={() => setSelectedMoodFilter('all')}
+                          className="hover:text-rose-400 p-0.5"
+                          title="Clear mood filter"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
 
-                    <button
-                      id="export-diary-txt-btn"
-                      onClick={handleExportDiary}
-                      title="Export Diary Entries as Text File"
-                      className="p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-colors shrink-0"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-                  </>
-                )}
+                    {/* Personality Filter Chip */}
+                    {selectedPersonalityFilter !== 'all' && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-purple-950/80 border border-purple-700/60 text-purple-300 text-[11px]">
+                        <span>
+                          Archetype: {PERSONALITIES[selectedPersonalityFilter as PersonalityId]?.name || selectedPersonalityFilter}
+                        </span>
+                        <button
+                          onClick={() => setSelectedPersonalityFilter('all')}
+                          className="hover:text-rose-400 p-0.5"
+                          title="Clear personality filter"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
 
-                <button
-                  id="diary-add-entry-btn"
-                  onClick={() => {
-                    onClose();
-                    onNewPhoto();
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all shrink-0 shadow-sm"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Translate New Photo</span>
-                </button>
-              </div>
+                    {/* Breed Filter Chip */}
+                    {selectedBreedFilter !== 'all' && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 text-[11px]">
+                        <span>Breed: {selectedBreedFilter}</span>
+                        <button
+                          onClick={() => setSelectedBreedFilter('all')}
+                          className="hover:text-rose-400 p-0.5"
+                          title="Clear breed filter"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+
+                    {/* Starred Filter Chip */}
+                    {favoritesOnly && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-950/80 border border-amber-700/60 text-amber-300 text-[11px]">
+                        <span>⭐ Starred Only</span>
+                        <button
+                          onClick={() => setFavoritesOnly(false)}
+                          className="hover:text-rose-400 p-0.5"
+                          title="Clear starred filter"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Reset All Button */}
+                  <button
+                    id="clear-all-filters-btn"
+                    onClick={handleClearFilters}
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 underline font-semibold flex items-center gap-1"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Entries Scrapbook Stream */}
@@ -392,23 +555,36 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
                     🐶
                   </div>
                   <div className="space-y-1 max-w-sm">
-                    <h3 className="text-base font-bold text-white">No diary entries found</h3>
+                    <h3 className="text-base font-bold text-white">
+                      {entries.length === 0 ? 'No diary entries yet' : 'No matching entries found'}
+                    </h3>
                     <p className="text-xs text-slate-400">
                       {entries.length === 0
                         ? "You haven't translated any dog thoughts yet! Upload a photo or select a test dog to create your first diary entry."
-                        : 'No entries matched your current search or filter criteria.'}
+                        : 'No entries match your current search or filter criteria. Try adjusting your mood, personality, or breed filters.'}
                     </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      onClose();
-                      onNewPhoto();
-                    }}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20 flex items-center gap-2"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>Upload First Dog Photo</span>
-                  </button>
+                  {entries.length > 0 && hasActiveFilters ? (
+                    <button
+                      id="empty-state-reset-filters-btn"
+                      onClick={handleClearFilters}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 text-xs font-bold transition-all shadow-md flex items-center gap-2"
+                    >
+                      <Filter className="w-4 h-4 text-indigo-400" />
+                      <span>Clear All Filters</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onNewPhoto();
+                      }}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20 flex items-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>Upload First Dog Photo</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 filteredEntries.map((item) => {
@@ -697,6 +873,10 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
             <MoodDistributionChart
               moodData={moodAnalytics.data}
               totalEntries={analytics.total}
+              onSelectMoodCategory={(category) => {
+                setSelectedMoodFilter(category);
+                setActiveTab('timeline');
+              }}
             />
 
             {/* Archetype Distribution Breakdown */}
