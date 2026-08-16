@@ -121,6 +121,10 @@ export const DevSpecModal: React.FC<DevSpecModalProps> = ({ isOpen, onClose }) =
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
               <strong>Demo & Social Share:</strong> 1-Click test presets + exportable 1080x1080 meme cards.
             </li>
+            <li className="flex items-center gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <strong>Open Source License:</strong> Released openly under the permissive MIT License.
+            </li>
           </ul>
         </div>
 

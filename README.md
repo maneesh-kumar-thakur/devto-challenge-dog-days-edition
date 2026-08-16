@@ -58,7 +58,7 @@ Users can choose or auto-detect personality archetypes that shape both the AI pr
 - **Frontend**: React 19, TypeScript, Tailwind CSS, Lucide Icons, Canvas Confetti
 - **Backend**: Node.js, Express 4, Vite middleware integration
 - **AI & ML**: Google GenAI SDK (`@google/genai`), ElevenLabs REST API
-- **Testing**: Vitest unit test runner (31 automated unit tests across 8 test suites)
+- **Testing**: Vitest unit test runner (38 automated unit tests across 11 test suites)
 - **Deployment**: Single bundled CommonJS server (`dist/server.cjs`) compiled with `esbuild`
 
 ---
@@ -86,10 +86,9 @@ Users can choose or auto-detect personality archetypes that shape both the AI pr
                  ▼
     [ Translation Viewer & Visualizer ]
                  │
-   ┌─────────────┴─────────────┐
-   ▼                           ▼
-[ Shareable Meme Card ]   [ Canine Thought Diary ]
-(HTML5 Canvas Export)     (Local Scrapbook & Analytics)
+   ┌─────────────┼─────────────┐
+   ▼             ▼             ▼
+[ Meme Card ] [ Diary ]  [ PDF Keepsake ]
 ```
 
 ---
@@ -106,7 +105,7 @@ Users can choose or auto-detect personality archetypes that shape both the AI pr
 
 ## 🧪 Unit Tests & Quality Assurance
 
-The application includes 31 unit tests covering all core workflows:
+The application includes 38 unit tests covering all core workflows:
 
 ```bash
 # Run all unit tests
@@ -115,6 +114,9 @@ npm test
 
 ### Test Suites:
 - `canineDiary.test.ts` — Diary search filtering, favorite toggling, paw rating clamping, analytics calculation, export formatting.
+- `pdfExport.test.ts` — PDF Keepsake document generation, page budgeting, and empty record guards.
+- `packDebate.test.ts` — Multi-dog Pack Debate scenarios, character assignment, and dialogue continuity.
+- `breedInsights.test.ts` — Breed identification, heritage notes, and backward compatibility fallbacks.
 - `imageOptimizer.test.ts` — Data URI extraction, whitespace cleaning, MIME-type validation, size limits.
 - `audioEngine.test.ts` — Network fallback to Web Speech, 500 status handling, blob URL creation.
 - `historyStorage.test.ts` — LocalStorage persistence, 20/30-item FIFO pruning, deduplication.
@@ -138,6 +140,16 @@ ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
 ```
 
 *Note: If `ELEVENLABS_API_KEY` is not provided, the app automatically switches to the browser's built-in Web Speech API.*
+
+---
+
+## 📜 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](./LICENSE) file for details.
+
+```
+MIT License - Copyright (c) 2026 Translate My Dog Contributors
+```
 
 ---
 

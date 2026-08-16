@@ -20,11 +20,13 @@ import {
   Smile,
   Cookie,
   AlertCircle,
-  Plus
+  Plus,
+  FileText
 } from 'lucide-react';
 import { DogTranslationResult, PersonalityId } from '../types';
 import { PERSONALITIES, PERSONALITY_LIST } from '../data/personalities';
 import { playWebSpeechSynthesis } from '../utils/audioEngine';
+import { exportDiaryToPdf } from '../utils/pdfExport';
 
 interface CanineDiaryModalProps {
   isOpen: boolean;
@@ -57,6 +59,7 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNotes, setEditNotes] = useState<string>('');
   const [editDogName, setEditDogName] = useState<string>('');
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // Filtered entries
   const filteredEntries = useMemo(() => {
@@ -206,6 +209,20 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  const handleExportPdf = async () => {
+    if (entries.length === 0) return;
+    try {
+      setIsExportingPdf(true);
+      // Use custom pet name from the first entry if available or generic
+      const firstEntryName = entries.find((e) => e.dogName)?.dogName;
+      await exportDiaryToPdf(filteredEntries.length > 0 ? filteredEntries : entries, firstEntryName);
+    } catch (err) {
+      console.error('Error generating PDF keepsake:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-3xl h-[92vh] max-h-[900px] flex flex-col shadow-2xl overflow-hidden text-white">
@@ -315,14 +332,31 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
 
                 {/* Export & New Photo Action Buttons */}
                 {entries.length > 0 && (
-                  <button
-                    id="export-diary-btn"
-                    onClick={handleExportDiary}
-                    title="Export Diary Entries as Text File"
-                    className="p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
+                  <>
+                    <button
+                      id="export-diary-pdf-btn"
+                      onClick={handleExportPdf}
+                      disabled={isExportingPdf}
+                      title="Download Canine Diary as Printable PDF Keepsake"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-xs transition-all shrink-0 shadow-md border border-indigo-400/30 disabled:opacity-50"
+                    >
+                      {isExportingPdf ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <FileText className="w-3.5 h-3.5" />
+                      )}
+                      <span>Export PDF</span>
+                    </button>
+
+                    <button
+                      id="export-diary-txt-btn"
+                      onClick={handleExportDiary}
+                      title="Export Diary Entries as Text File"
+                      className="p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-colors shrink-0"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                  </>
                 )}
 
                 <button
