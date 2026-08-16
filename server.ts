@@ -110,94 +110,83 @@ Respond in valid strict JSON matching this exact structure:
     let imagePart: any;
 
     if (imageBase64) {
-      const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
       let mimeType = 'image/jpeg';
-      let data = imageBase64;
+      let cleanData = imageBase64.trim();
 
-      if (matches && matches.length === 3) {
-        mimeType = matches[1];
-        data = matches[2];
+      if (cleanData.includes(';base64,')) {
+        const parts = cleanData.split(';base64,');
+        const mimeMatch = parts[0].match(/data:([a-zA-Z0-9.+/_-]+)/);
+        if (mimeMatch && mimeMatch[1]) {
+          mimeType = mimeMatch[1];
+        }
+        cleanData = parts[1] || '';
       }
+
+      // Strip whitespace or newlines
+      cleanData = cleanData.replace(/[\r\n\s]+/g, '');
 
       imagePart = {
         inlineData: {
           mimeType,
-          data,
+          data: cleanData,
         },
       };
     } else if (imageUrl) {
-      // Fetch external image buffer to inlineData
-      const imgRes = await fetch(imageUrl);
-      const arrayBuffer = await imgRes.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
+      try {
+        const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(8000) });
+        if (imgRes.ok) {
+          const arrayBuffer = await imgRes.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
 
-      imagePart = {
-        inlineData: {
-          mimeType,
-          data: buffer.toString('base64'),
-        },
-      };
-    }
-
-    let responseText = '{}';
-    let lastErr: any = null;
-
-    // 1. Try Interactions API first (as requested by latest Gemini endpoint guidelines)
-    try {
-      if ((ai as any)?.interactions?.create) {
-        const interaction = await (ai as any).interactions.create({
-          model: 'omni-flash',
-          input: [
-            {
-              role: 'user',
-              content: [
-                { text: promptText },
-                imagePart,
-              ],
+          imagePart = {
+            inlineData: {
+              mimeType,
+              data: buffer.toString('base64'),
             },
-          ],
-        });
-
-        if (interaction) {
-          const out = (interaction as any).output || (interaction as any).text || (interaction as any).content || interaction;
-          responseText = typeof out === 'string' ? out : JSON.stringify(out);
-          lastErr = null;
+          };
         }
+      } catch (fetchErr) {
+        console.warn('Could not fetch external image, continuing with prompt:', fetchErr);
       }
-    } catch (interactionErr: any) {
-      console.warn('Interactions API omni-flash attempt notice:', interactionErr.message);
-      lastErr = interactionErr;
     }
 
-    // 2. If Interactions API didn't return or failed, try generateContent with current models
-    if (!responseText || responseText === '{}') {
-      const candidateModels = [
-        'gemini-3.7-flash',
-        'gemini-flash-latest',
-        'gemini-3-flash',
-        'gemini-3.7-flash-latest',
-      ];
+    let responseText = '';
+    const contents: any[] = imagePart ? [imagePart, promptText] : [promptText];
 
-      for (const modelName of candidateModels) {
+    // Candidate model list per @google/genai guidelines
+    const candidateModels = [
+      'gemini-flash-lite-latest',
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+      'gemini-2.5-pro',
+      'gemini-pro-latest',
+    ];
+
+    for (const modelName of candidateModels) {
+      for (let attempt = 0; attempt < 2; attempt++) {
         try {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 800));
+          }
           const response = await ai.models.generateContent({
             model: modelName,
-            contents: [imagePart, promptText],
+            contents,
             config: {
               responseMimeType: 'application/json',
               temperature: 0.85,
             },
           });
-          if (response?.text) {
-            responseText = response.text;
-            lastErr = null;
+          if (response?.text && response.text.trim().length > 0) {
+            responseText = response.text.trim();
             break;
           }
-        } catch (err: any) {
-          lastErr = err;
-          console.warn(`Model ${modelName} notice:`, err.message);
+        } catch {
+          // Quietly fallback to next attempt/model
         }
+      }
+      if (responseText) {
+        break;
       }
     }
 

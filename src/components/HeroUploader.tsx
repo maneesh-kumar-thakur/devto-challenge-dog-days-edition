@@ -3,6 +3,7 @@ import { Upload, Camera, Sparkles, Image as ImageIcon, CheckCircle, Info, Chevro
 import { PersonalityId, PresetDog } from '../types';
 import { PERSONALITY_LIST, PERSONALITIES } from '../data/personalities';
 import { PRESET_DOGS } from '../data/presets';
+import { optimizeImageFile, isValidImageFile } from '../utils/imageOptimizer';
 
 interface HeroUploaderProps {
   onStartTranslation: (
@@ -36,24 +37,33 @@ export const HeroUploader: React.FC<HeroUploaderProps> = ({
     }
   };
 
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     setImageError(null);
-    if (!file.type.startsWith('image/')) {
-      setImageError('Please select a valid image file (JPEG, PNG, WEBP).');
+    const validation = isValidImageFile(file);
+    if (!validation.valid) {
+      setImageError(validation.error || 'Please select a valid image file.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      setSelectedImageBase64(base64);
+    try {
+      const optimized = await optimizeImageFile(file);
+      setSelectedImageBase64(optimized.dataUrl);
       setSelectedPresetUrl(null);
       setSelectedPresetId(null);
-    };
-    reader.onerror = () => {
-      setImageError('Failed to read image file.');
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      console.warn('Image optimization notice, falling back to direct reader:', err);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setSelectedImageBase64(base64);
+        setSelectedPresetUrl(null);
+        setSelectedPresetId(null);
+      };
+      reader.onerror = () => {
+        setImageError('Failed to read image file.');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
