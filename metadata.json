@@ -1,0 +1,7 @@
+{
+  "name": "Translate My Dog",
+  "description": "AI-powered dog translator that turns pet photos into hilarious inner monologues and voiced thoughts using Google Gemini Vision and ElevenLabs.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

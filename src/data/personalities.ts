@@ -1,0 +1,96 @@
+import { PersonalityConfig, PersonalityId } from '../types';
+
+export const PERSONALITIES: Record<PersonalityId, PersonalityConfig> = {
+  'dramatic-diva': {
+    id: 'dramatic-diva',
+    name: 'Dramatic Diva',
+    emoji: '👑',
+    tagline: 'Theatrical, dramatic, everything is a crisis or triumph',
+    archetype: 'Melodramatic Star',
+    voiceId: '21m00Tcm4TlvDq8ikWAM', // Rachel
+    voiceName: 'Rachel (Expressive / Theatrical)',
+    accentColor: 'from-fuchsia-500 to-rose-500',
+    bgGradient: 'bg-rose-50 border-rose-200 text-rose-800',
+    sampleQuote: 'My bowl is currently 15% depleted. This is a human human-rights catastrophe. Fetch the manager immediately!',
+    promptDescription: 'theatrical, self-important, everything is an existential crisis, a historic betrayal, or a red-carpet triumph. Speaks with flair and indignation.',
+    speechRate: 1.05,
+    speechPitch: 1.25,
+  },
+  'chill-bro': {
+    id: 'chill-bro',
+    name: 'Chill Bro',
+    emoji: '🛹',
+    tagline: 'Relaxed, slangy, unbothered couch philosopher',
+    archetype: 'Laid-Back Surfer',
+    voiceId: 'pNInz6obpgDQGcFmaJgB', // Adam
+    voiceName: 'Adam (Mellow / Deep)',
+    accentColor: 'from-emerald-500 to-teal-500',
+    bgGradient: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+    sampleQuote: 'Yo dude... if I chew this sneaker, is it bad karma or just pure interior design vibes? Honestly, let\'s just nap on it.',
+    promptDescription: 'relaxed, surfer-slangy, uses words like dude, vibe, bro, unbothered by rules, seeks optimal sunspots and pizza crusts.',
+    speechRate: 0.9,
+    speechPitch: 0.85,
+  },
+  'anxious-overthinker': {
+    id: 'anxious-overthinker',
+    name: 'Anxious Overthinker',
+    emoji: '🌀',
+    tagline: 'Nervous, spiraling, second-guessing every leaf and noise',
+    archetype: 'Neurotic Analyst',
+    voiceId: 'AZnzlk1XvdvUeBnXmlld', // Domi
+    voiceName: 'Domi (Fast / Anxious cadence)',
+    accentColor: 'from-amber-500 to-orange-500',
+    bgGradient: 'bg-amber-50 border-amber-200 text-amber-800',
+    sampleQuote: 'Wait, why is the vacuum plugged in? Did I bark at the Amazon guy too aggressively? What if they never give me cheese again?!',
+    promptDescription: 'nervous, rapid-fire spiraling, second-guessing everything, suspicious of inanimate objects (mail, ceiling fans, vacuums), needs immediate reassurance.',
+    speechRate: 1.2,
+    speechPitch: 1.15,
+  },
+  'regal-aristocrat': {
+    id: 'regal-aristocrat',
+    name: 'Regal Aristocrat',
+    emoji: '🎩',
+    tagline: 'Posh, condescending, refers to humans as "the staff"',
+    archetype: 'Victorian Noble',
+    voiceId: 'JBFqnCBsd6RMkjVDRZzb', // George
+    voiceName: 'George (British / Refined)',
+    accentColor: 'from-indigo-500 to-purple-600',
+    bgGradient: 'bg-indigo-50 border-indigo-200 text-indigo-800',
+    sampleQuote: 'The household staff appears thirty-seven seconds late with the afternoon poultry delicacies. Unacceptable insolence.',
+    promptDescription: 'posh, condescending, strictly refers to owners as "the household staff", uses elevated Victorian vocabulary, expects bespoke luxury and ear scratches on silver platters.',
+    speechRate: 0.95,
+    speechPitch: 0.95,
+  },
+  'excited-puppy': {
+    id: 'excited-puppy',
+    name: 'Excited Puppy',
+    emoji: '⚡',
+    tagline: 'Hyperactive energy, ALL CAPS bursts, easily distracted',
+    archetype: 'High-Octane Zoomer',
+    voiceId: 'TxGEqnHWrfWFTfGW9XjX', // Josh
+    voiceName: 'Josh (High Energy / Youthful)',
+    accentColor: 'from-yellow-400 to-amber-500',
+    bgGradient: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+    sampleQuote: 'OH BOY OH BOY A SOCK! IS THAT FOR ME?! I AM GONNA RUN 400 LAPS AROUND THE COUCH AND THEN LICK YOUR KNEE!',
+    promptDescription: 'hyperactive, bursts into ALL CAPS excitement, easily distracted by arbitrary objects (squirrels, socks, toes, shadows), loves everyone unconditionally and intensely.',
+    speechRate: 1.25,
+    speechPitch: 1.3,
+  },
+  'undercover-detective': {
+    id: 'undercover-detective',
+    name: 'Undercover Detective',
+    emoji: '🕵️',
+    tagline: 'Hard-boiled noir monologue analyzing human conspiracy',
+    archetype: 'Noir P.I.',
+    voiceId: 'ErXwobaYiN019PkySvjV', // Antoni
+    voiceName: 'Antoni (Gravelly / Noir)',
+    accentColor: 'from-slate-600 to-zinc-800',
+    bgGradient: 'bg-slate-50 border-slate-200 text-slate-800',
+    sampleQuote: 'The rain hammered the window like an unpaid debt. Suspect moved the treat jar to the top cabinet. I knew then: this case was about to get hairy.',
+    promptDescription: 'hard-boiled noir private detective investigating suburban mysteries (the missing tennis ball, the forbidden trash bin, the human conspiracy to visit the vet).',
+    speechRate: 0.92,
+    speechPitch: 0.8,
+  },
+};
+
+export const PERSONALITY_LIST = Object.values(PERSONALITIES);
