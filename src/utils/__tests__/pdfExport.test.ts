@@ -42,4 +42,39 @@ describe('PDF Export Utility (exportDiaryToPdf)', () => {
     // Should execute cleanly
     await expect(exportDiaryToPdf(mockEntries, 'Daisy')).resolves.not.toThrow();
   });
+
+  it('should cleanly wrap and paginate long monologues, notes, and mood descriptions', async () => {
+    const longEntries: DogTranslationResult[] = [
+      {
+        id: 'entry-long-1',
+        imageUrl: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1',
+        personality: 'undercover-detective',
+        personalityName: 'Undercover Detective',
+        identifiedBreed: 'Golden Retriever Mix with Welsh Corgi and German Shepherd Ancestry',
+        breedInsight:
+          'This heritage exhibits intense focus, pastoral vigilance, and an uncanny ability to notice slight micro-shifts in kitchen treat cabinet topography over extended periods of observation.',
+        monologue:
+          'I have cross-examined the evidence across three separate time zones and four room quadrants. The red laser dot is not an earthly organism, but a classified interdimensional emissary sent to test my tactical reflexes. When the human clicks the metal treat can, soundwaves reverberate at precisely 440 Hertz, establishing a psychic treaty. We cannot compromise.',
+        detectedMood:
+          '99.9% High Alert Sensory Vigilance & Red Dot Deep State Surveillance Assessment Protocol',
+        visualClues: [
+          'Ears angled at exactly 45 degrees towards kitchen threshold',
+          'Snout vibrating in Morse code pattern',
+          'Pupils dilated during suspicious treat jar inspection',
+          'Weight shifted strategically onto left rear paw',
+        ],
+        canineIqScore: '180 (Deep Detective)',
+        suggestedAction:
+          'Maintain perimeter watch, offer dehydrated beef liver as a diplomatic peace offering, and inspect the curtains for hidden surveillance bugs.',
+        timestamp: 1718200000000,
+        dogName: 'Archduke Bartholomew von Fluffington the Third',
+        ownerNotes:
+          'Observed this deep contemplation while opening the refrigerator. He refused to look away until I surrendered a slice of provolone cheese.',
+      },
+    ];
+
+    await expect(
+      exportDiaryToPdf(longEntries, 'Archduke Bartholomew von Fluffington the Third')
+    ).resolves.not.toThrow();
+  });
 });

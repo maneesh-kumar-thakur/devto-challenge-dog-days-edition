@@ -27,6 +27,8 @@ import { DogTranslationResult, PersonalityId } from '../types';
 import { PERSONALITIES, PERSONALITY_LIST } from '../data/personalities';
 import { playWebSpeechSynthesis } from '../utils/audioEngine';
 import { exportDiaryToPdf } from '../utils/pdfExport';
+import { calculateMoodDistribution } from '../utils/moodAnalytics';
+import { MoodDistributionChart } from './MoodDistributionChart';
 
 interface CanineDiaryModalProps {
   isOpen: boolean;
@@ -136,6 +138,15 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
       treatDeficitIndex: `${treatDeficitNum}%`,
       happinessScore: `${happinessNum}%`,
     };
+  }, [entries, isOpen]);
+
+  // Mood distribution computation
+  const moodAnalytics = useMemo(() => {
+    if (!isOpen || entries.length === 0) {
+      return { data: [], topMoodCategory: null, totalMoods: 0 };
+    }
+    const moodStrings = entries.map((e) => e.detectedMood);
+    return calculateMoodDistribution(moodStrings);
   }, [entries, isOpen]);
 
   if (!isOpen) return null;
@@ -681,6 +692,12 @@ export const CanineDiaryModal: React.FC<CanineDiaryModalProps> = ({
                 <p className="text-[10px] text-slate-500">Most frequent persona</p>
               </div>
             </div>
+
+            {/* Detected Mood Spectrum Chart (Recharts) */}
+            <MoodDistributionChart
+              moodData={moodAnalytics.data}
+              totalEntries={analytics.total}
+            />
 
             {/* Archetype Distribution Breakdown */}
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4">
